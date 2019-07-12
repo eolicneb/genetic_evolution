@@ -1,0 +1,70 @@
+#:kivy!
+
+<Foot>:
+    size: 20, 20
+    canvas:
+        Color:
+            rgb: (.1, .1, .4)
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+<Body>:
+    size: 100, 100
+    canvas:
+        Color:
+            rgba: (.8, .6, 0, .5)
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+<Muscle>:
+    width: 5
+    length: 100
+    p: []
+    canvas:
+        Color:
+            rgb: (.8, .4, .2)
+        Line:
+            width: self.width
+            points: self.p
+            
+<Creature>:
+    trunk: trunk
+    muscle: biceps
+    lFoot: left_foot
+    rFoot: right_foot
+
+    Body:
+        id: trunk
+        center: self.parent.center
+
+    Foot:
+        id: left_foot
+        center_y: self.center_y
+        center_x: self.center_x - 55
+
+    Foot:
+        id: right_foot
+        center_y: self.parent.center_y
+        center_x: self.parent.center_x + 55
+
+    Muscle:
+        id: biceps
+        # center: self.parent.center
+        p: left_foot.center + right_foot.center
+
+<Park>:
+    id: parque
+    bicho: bicho
+    
+    name: 'parque'    
+    canvas:
+        Color:
+            rgb: (0.1, 0.5, 0.1)
+        Rectangle:
+            size: self.size
+            pos: self.pos
+    Creature:
+        id: bicho
+        center: self.parent.center
