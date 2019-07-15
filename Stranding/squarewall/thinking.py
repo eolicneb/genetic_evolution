@@ -2,10 +2,13 @@ import numpy as np
 
 class Brain(object):
     mutation_factor = 0.001
-    def __init__(self, schema=(2,1)):
+    def __init__(self, schema=(2,1), layers=None):
         self.schema = schema
-        self.layers = []
-        self.init_layers()
+        if layers:
+            self.layers = layers
+        else:
+            self.layers = []
+            self.init_layers()
     def init_layers(self):
         sch = self.schema
         for i, o in zip(sch[:-1], sch[1:]):
