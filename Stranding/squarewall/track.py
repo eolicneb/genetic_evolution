@@ -1,4 +1,7 @@
 import numpy as np
+# from kivy.uix.widget import Widget
+# from kivy.properties import ObjectProperty
+# from kivy.vector import Vector
 
 def xy_from_polar(r, a, center=(0,0)):
     from math import sin, cos
@@ -32,6 +35,7 @@ class Track(object):
     def __init__(self, width=50, **kwargs):
         self.width = width
         self.build_track(**kwargs)
+        self.build_widget()
     def build_track(self, **kwargs):
         center = kwargs.get('center', (0, 0))
         self.in_radius = kwargs.get('radius', 300)
@@ -40,6 +44,8 @@ class Track(object):
         self.center = np.array(center)
         self.out_radius = self.in_radius + self.width
         # self.initial_pos = [self.center[0] - self.in_radius - self.width/2, self.center[1]]
+    def build_widget(self):
+        self 
     def is_in_track(self, pos):
         return _inside(self.out_radius, self.center, pos) \
                 and not _inside(self.in_radius, self.center+self.offset, pos)
@@ -65,6 +71,9 @@ class Track(object):
         R = (r*r).sum()**.5 # r and t modulus
         # print(f'p1: {pos}, p2: {old_pos}, r: {r}, t: {t}, R: {R}')
         return ((p-np.array(old_pos))*t).sum()/R/R  
+    def track_widget(self):
+        pass
+
 
 if __name__ == "__main__":
     from math import pi

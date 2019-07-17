@@ -70,12 +70,28 @@ Builder.load_string('''
             points: self.left_foot.center + self.right_foot.center
 
 <Park>:
+    watch: timer
     canvas:
         Color:
             rgb: .02, .05, .0
         Rectangle:
             size: self.size
             pos: self.pos
+    Label:
+        id: timer
+        text: '      0.00 s'
+        pos: self.parent.x + 10, self.parent.y + 10
+        color: 1., 1., .0, 1.
+        size: self.texture_size
+        # text_size: 150, 40
+        font_size:'20sp'
+        size_hint: (None, None)
+        # canvas.before:
+        #     Color:
+        #         rgb: .0, .0, .2
+        #     Rectangle:
+        #         size: self.size
+        #         pos: self.pos
 ''')
 class Whisker(Widget):
     whisker = ObjectProperty(None)
@@ -161,6 +177,7 @@ class Park(FloatLayout):
     dt = 0.1
     df = 0.05
     allow_move = True
+    watch = ObjectProperty(None)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         Clock.schedule_interval(self.move, self.df)
@@ -172,19 +189,22 @@ class Park(FloatLayout):
             Movement.box.height = value[1]
             print(Movement.box.width, Movement.box.height)
     def move(self, dt):
-        print('Moving!')
+        # print('Moving!')
         if self.allow_move:
             old_dt = dt
             dt *= self.dt/self.df
             # print(f'Times: given_dt={old_dt}, sim_dt={self.dt}, frame_dt={self.df}, actual_dt={dt}')
             dt = min((dt, self.dt)) # Limits the time step so nothing blows if dt is too large
             Movement.inc_t(dt)
+            self.watch.text = f'{Movement.t:10.2f} s'
+            # print(self.watch.text)
             for ch in Fauna.zoo:
-                if ch.mov.alive:
+                # if ch.mov.alive:
                     ch.move(dt) 
             self.new_era(dt)
     def new_era(self, dt):
-        print('new era')
+        # print('new era')
+        pass
 
 class Fauna(object):
     # root = Widget()
