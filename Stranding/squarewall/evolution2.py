@@ -16,77 +16,75 @@ from kivy.properties import ListProperty, ObjectProperty, NumericProperty, Strin
 from random import random
 from math import pi
 from track import Track, directions, xy_from_polar
+from graphics.discus import CircusTrack
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.vector import Vector
 from kivy.uix.recycleview.views import _cached_views, _view_base_cache
 
-schema = (8, 10, 6, 4)
-population = 500
+schema = (12, 20, 10, 4)
+population = 50
 top_most_show = 10
 reproductions = population // 2 - population // 10 - 1
-dt = 1.
+dt = 10.
 iterations = 0
 time_steps = 200
 creature_size = 20
 dad_color=(.1, .8, .0, .8) # Fathers are green
 son_color=(.2, .0, .8, .8) # Sons are blue
 new_color=(.8, .0, .7, .8) # Newcomers are pink
-sq.Park.dt = dt
-sq.Park.df = .03
-Brain.mutation_factor = 0.01
+df = .003
+Brain.mutation_factor = 0.001
 visualize = True
-
+# 
 track = Track(width=60, radius=180, center=Window.center, offset=(40, 0))
 launch = track.initial_pos
 
 class Eden(sq.Park):
-    def new_era(self, deltat):
-        # print(RegisteredMov.livings, len(self.children))
-        # printzoo()
-        # print(f'{RegisteredMov.livings:5d} creatures alive, only {len(self.children)-2} in Eden')
-        RegisteredMov.inc_t(deltat)
-        sq.Fauna.Darwin.sort(reverse=True, key=lambda x: x[0])
-        if sq.Fauna.Darwin:
-            for creat in sq.Fauna.Darwin[:top_most_show]:
-                if creat[1] and not creat[1].parent and creat[1].mov.alive:
-                    sq.Fauna.root.add_widget(creat[1])
-                
-            for creat in sq.Fauna.Darwin[top_most_show:]:
-                if creat[1] and creat[1].parent and creat[1].mov.alive:
-                    sq.Fauna.root.remove_widget(creat[1])
-        sq.Fauna.Darwin = []
-
+    dt = dt
+    df = df
+    def move(self, dt):
+        # print('Moving!')
+        if self.allow_move:
+            old_dt = dt
+            dt *= self.dt/self.df
+            # print(f'Times: given_dt={old_dt}, sim_dt={self.dt}, frame_dt={self.df}, actual_dt={dt}')
+            dt = min((dt, self.dt)) # Limits the time step so nothing blows if dt is too large
+            RegisteredMov.inc_t(dt)
+            self.watch.text = f'time: {RegisteredMov.t:10.2f} s\nEpoch {sq.Fauna.epoch}\n{sq.Fauna.current_creature+1}: {sq.Fauna.zoo[sq.Fauna.current_creature].name}'
+            ch = sq.Fauna.zoo[sq.Fauna.current_creature]
+            if ch.mov.alive:
+                ch.move(dt) 
+            self.new_era()
+    def new_era(self):
         # Evolving time
-        if RegisteredMov.livings == 0 or RegisteredMov.t > time_steps*dt:
-            # sq.Fauna.root.allow_move = False
+        if sq.Fauna.isEvolvingTime(sq.Fauna):
             Clock.unschedule(super().move)
             print('It`s time to evolve again!')
-            while len(self.children) > 2:
-                for ch in self.children:
-                    if isinstance(ch, sq.Creature):
-                        print(f'{ch.name} in Eden {ch.parent}')
-                        self.remove_widget(ch)
-                    else:
-                        print(f'{ch} is not a Creature')
-                print(f'{len(self.children)} creatures in Eden before evolving')
-
-            evolve()    
-            print(f'{len(self.children)} creatures in Eden after evolving')
-            for creature in sq.Fauna.zoo:
-                if creature.parent:
-                    print(f'{creature.name} already in {creature.parent}!!')
-                    creature.parent.remove_widget(creature)
-                self.add_widget(creature)
-                creature.pos = launch[:]
-                creature.mov.pos = launch[:]
+            evolve()
             RegisteredMov.t = 0
             Clock.schedule_interval(super().move, self.df)
-            # sq.Fauna.root.allow_move = True
 
     def on_touch_down(self, touch):
         print(f'Screen touched: {touch}')
-        self.toggle_pause()
+        x, y = touch.spos[0], touch.spos[1]
+        if .3 < x < .7:
+            if .3 < y < .7:
+                self.toggle_pause()
+            elif y <= .3:
+                self.df *= 2
+                print(f'Frame time: {self.df} s')
+            elif y >= .7:
+                self.df /= 2
+                print(f'Frame time: {self.df} s')
+        elif .3 >= x:
+            # dt /= 2
+            self.dt /= 2
+            print(f'Step time: {self.dt} s')
+        elif x >= .7:
+            # dt *= 2
+            self.dt *= 2
+            print(f'Step time: {self.dt} s')
     def toggle_pause(self):
         self.allow_move = not self.allow_move
         if self.allow_move:
@@ -94,19 +92,19 @@ class Eden(sq.Park):
         else:
             Clock.unschedule(super().move)
         
-class Discus(Widget):
-    radius = NumericProperty(400)
-    def __init__(self, **kwargs):
-        radius = kwargs.pop('radius', 400)
-        color = kwargs.pop('color', (.5, .5, .5, .5))
-        super().__init__(**kwargs)
-        self.pos = kwargs.pop('pos', (Window.width/2, Window.height/2))
-        self.pos = Vector(*self.pos)-(radius, radius)
-        self.movable = False
-        # self.center = (Window.width/2-radius, Window.height/2-radius)
-        with self.canvas:
-            Color(*color)
-            Ellipse(pos=self.pos, size=(2*radius, 2*radius))
+# class Discus(Widget):
+#     radius = NumericProperty(400)
+#     def __init__(self, **kwargs):
+#         radius = kwargs.pop('radius', 400)
+#         color = kwargs.pop('color', (.5, .5, .5, .5))
+#         super().__init__(**kwargs)
+#         self.pos = kwargs.pop('pos', (Window.width/2, Window.height/2))
+#         self.pos = Vector(*self.pos)-(radius, radius)
+#         self.movable = False
+#         # self.center = (Window.width/2-radius, Window.height/2-radius)
+#         with self.canvas:
+#             Color(*color)
+#             Ellipse(pos=self.pos, size=(2*radius, 2*radius))
 
 class DiyingCreature(sq.Creature):
     achieve = StringProperty('0.0 u')
@@ -115,19 +113,13 @@ class DiyingCreature(sq.Creature):
         super().__init__(**kwargs)
         self.size = (creature_size, creature_size)
     def move(self, dt):
-        if not self.mov.alive and self.parent:
-            self.parent.remove_widget(self)
-            print(f'{self.name} died!')
-        else:
+        if self.mov.alive:
             pos = self.mov(dt)
             if pos:
                 self.pos = pos
                 sq.Fauna.Darwin.append((self.mov.distance**2, self))
                 self.move_whiskers()
                 self.achieve = f'{self.mov.distance:6.2f} rad'
-            else:
-                if self.parent:
-                    self.parent.remove_widget(self)
                 # print(f'{self.name} terminated! Remaining creatures: {RegisteredMov.livings}')
     def move_whiskers(self):
         self.whisker.pos = Vector(*xy_from_polar(10., self.mov.nose)) + self.pos
@@ -152,7 +144,7 @@ class RegisteredMov(sq.Movement):
         if input_[0]:
             input_ = (np.array(input_)**(-1.)).clip(0,10)
             self.input_ = input_ # + self.old_pos
-            # After the thinking input is build, the current
+            # After the thinking input is built, the current
             # position is saved for the next movement step.
             self.old_pos = tuple(self.pos)
             return self.response(dt)
@@ -192,7 +184,28 @@ class RegisteredMov(sq.Movement):
         self.t_inicial = .0
         self.distance = .0
 
+def isEvolvingTime(self):
+    curcreat = self.zoo[self.current_creature]
+    if RegisteredMov.t > time_steps*dt \
+            or not curcreat.mov.alive:
+        curcreat.parent.remove_widget(curcreat)
+        if self.current_creature + 1 == len(self.zoo):
+            self.current_creature = 0
+            self.epoch += 1
+            print(f'Epoch {self.epoch}')
+            return True
+        else:
+            RegisteredMov.t = 0
+            self.current_creature += 1
+            curcreat = self.zoo[self.current_creature]
+            self.root.add_widget(curcreat)
+            curcreat.pos = launch[:]
+            curcreat.mov.pos = launch[:]
+    return  False
+sq.Fauna.isEvolvingTime = isEvolvingTime
+
 sq.Fauna.Darwin = []
+sq.Fauna.epoch = 0
 sq.Fauna.genes = [ Brain(schema=schema) for _ in range(population) ]
 sq.Fauna.zoo = [ DiyingCreature(
                         color=new_color,
@@ -203,14 +216,18 @@ sq.Fauna.zoo = [ DiyingCreature(
                                                 brain=b,
                                                 track=track)
                         ) for b in sq.Fauna.genes ]
+sq.Fauna.current_creature = 0
 
 park = Eden()
-park.add_widget(Discus(radius=track.out_radius, color=(1., 1., 1.)))
-park.add_widget(Discus(radius=track.in_radius, color=(.0, .0, .0), pos=Vector(Window.center)+track.offset.tolist()))
-for c in sq.Fauna.zoo:
-    park.add_widget(c)
-    c.pos = launch[:]
-    c.mov.pos = launch[:]
+circus = CircusTrack(radius=track.in_radius,
+                            width=track.width,
+                            center=track.center.tolist(),
+                            offset=track.offset.tolist())
+park.add_widget(circus)
+c = sq.Fauna.zoo[0]
+park.add_widget(c)
+c.pos = launch[:]
+c.mov.pos = launch[:]
 
 def printzoo():
     for ix, creature in enumerate(sq.Fauna.zoo):
@@ -255,8 +272,6 @@ def evolve():
     
     for cre in darwin[2*R:P]:
         cre = cre[1]
-        # First, remove dead creatures from root widget
-        # root.remove_widget(sq.Fauna.zoo[cre])
 
         sq.Fauna.zoo[cre] = DiyingCreature(
                 color=new_color,
@@ -272,6 +287,7 @@ def evolve():
     print(f'restaurando población. valor previo: {RegisteredMov.livings}')
     RegisteredMov.livings = population
     sq.Fauna.Darwin = []
+    sq.Fauna.root.add_widget(sq.Fauna.zoo[sq.Fauna.current_creature])
 
 def new_epoch():
     print('Iteration ', iteration)
