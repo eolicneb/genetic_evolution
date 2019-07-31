@@ -26,7 +26,7 @@ schema = (12, 20, 10, 4)
 population = 50
 top_most_show = 10
 reproductions = population // 2 - population // 10 - 1
-dt = 10.
+dt = 1.
 iterations = 0
 time_steps = 200
 creature_size = 20
@@ -44,8 +44,8 @@ def dires(N=4, R=1., d=0., center=(0, 0)):
     return [ (float(R*sin((2*pi*i+d)/N)+center[0]), \
             float(R*cos((2*pi*i+d)/N)+center[1])) for i in range(N) ]
 
-path_track = Path(inner_points=dires(8,150,center=center), 
-                    outer_points=dires(8,180,center=center), 
+path_track = Path(inner_points=dires(15,150,.0,center=center), 
+                    outer_points=dires(15,210,.0,center=center), 
                     center=center)
    
 
@@ -214,6 +214,7 @@ def isEvolvingTime(self):
             curcreat.pos = launch[:]
             curcreat.mov.pos = launch[:]
     return  False
+
 sq.Fauna.isEvolvingTime = isEvolvingTime
 
 sq.Fauna.Darwin = []

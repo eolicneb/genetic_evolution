@@ -3,6 +3,38 @@ import numpy as np
 # from kivy.properties import ObjectProperty
 from kivy.vector import Vector
 
+class CachedVal(object):
+    """
+    Serves as a cache for last evaluated value.
+    If the point remains the same, the properties and evaluations
+    that the path has stored in this cached copy will be returned
+    without reevaluating.
+    """
+    def __init__(self, parent=None, cached={}, store={}):
+        self.cached = cached
+        self.store = store
+    def __call__(self, other_value, func_repr):
+        condition = np.array(other_value == self.cached.get(func_repr, None)).all()
+        if condition:
+            return True
+        self.cached[func_repr] = other_value
+        return False
+    def ifNewVal(self, function):
+        """ Decorator for cacheable functions
+        """
+        def check_cache(instance, new_val):
+            func_name = repr(function)+repr(instance)
+            # print(f'checking cached value for function {func_name}:')
+            if not self.__call__(new_val, func_name):
+                self.store[func_name] = function(instance, new_val)
+                # print(f'\tWe\'ve got a new value {new_val}, it returns {self.store[func_name]}')
+                return self.store[func_name]
+            # print(f'\t{new_val} is cached, it returns {self.store[func_name]}')
+            return self.store[func_name]
+        return check_cache
+
+cache = CachedVal().ifNewVal
+
 def xy_from_polar(r, a, center=(0,0)):
     from math import sin, cos
     return (r*cos(a)+center[0], r*sin(a)+center[1])
@@ -13,7 +45,7 @@ def directions(N=4, Ph=0.):
             in ( i*2*pi/N for i in range(N) )]
 
 def _det(m):
-    print(f'm = {m}')
+    # print(f'm = {m}')
     return m[0][0]*m[1][1] - m[0][1]*m[1][0]
 
 def _intersect(rad, cen, pos, di_):
@@ -95,7 +127,7 @@ class _edge(object):
         point = np.array(point)
         d1, d2, E = np.array(dir_), self.edge[0]-self.edge[1], self.edge[0]-point
         det = _det((d1, d2))
-        print(f'det {det}')
+        # print(f'det {det}')
         if det == 0:
             return None
         t, u = _det((E,d2))/det, _det((d1,E))/det
@@ -106,10 +138,11 @@ class _edge(object):
         if t <= 0:
             return None
         if self.next_:
-            point = point+d1*t # *1.0000000001
-            print(f'nexting.... point = {point}, dir = {d1}, t = {t}')
-            return t + self.next_.intersect(point, dir_)
-        print(f'returning distance {t}')
+            point = point+d1*t*1.0000000001 # 
+            # print(f'nexting.... point = {point}, dir = {d1}, t = {t}')
+            dt = self.next_.intersect(point, dir_)
+            return t + dt if dt else 0.0
+        # print(f'returning distance {t}')
         return t
     def __getitem__(self, item):
         return self.edge[item]
@@ -135,17 +168,18 @@ class Tile(object):
         t=None
         for ix, edge in enumerate(self.edges):
             t = _existing_min(t, edge.intersect(point, dir_))
-            if t:
-                print(f't to break is {t} in edge {ix}')
-        print(f'Tile is returning a distance of {t}')
+            # if t:
+                # print(f't to break is {t} in edge {ix}')
+        # print(f'Tile is returning a distance of {t}')
         return t
+    @cache
     def inside(self, point):
+        if not self.in_box(point):
+            return 0.0
         if abs(self.cycling(point)) > 1:
             return True
         return False
     def cycling(self, point):
-        if not self.in_box(point):
-            return 0.0
         from math import atan2
         angle, P = 0, Vector(point)
         for ed in self.edges:
@@ -164,13 +198,17 @@ class Tile(object):
 
 class Path(object):
     def dist(self, point, dir_):
+        if not self.is_in_track(point):
+            return None
         dist, i = None, 0
-        while not dist and i < len(self.tiles):
-            dist = self.tiles[i].intersect(point, dir_)
+        while i < len(self.tiles): # not dist and 
+            dist = _existing_min(self.tiles[i].intersect(point, dir_), dist)
             i += 1
-        print(f'path returning distance {dist}')
+        # print(f'path returning distance {dist}')
         return dist
+    @cache
     def is_in_track(self, point):
+        # print('Just checking...')
         for tile in self.tiles:
             if tile.inside(point):
                 return True
@@ -220,10 +258,10 @@ class Path(object):
 if __name__ == "__main__":
     from math import pi, sin, cos
     import matplotlib.pyplot as plt
-    
+
     def dires(N=4, R=1., d=0., center=(0, 0)):
         return [ (float(R*sin((2*pi*i+d)/N)+center[0]), float(R*cos((2*pi*i+d)/N)+center[1])) for i in range(N) ]
-    
+
     print('Path class testing:')
     p = Path(inner_points=dires(8,1.0), outer_points=dires(8,2.0))
     for tile in p.tiles:
